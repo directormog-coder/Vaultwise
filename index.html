@@ -2,11 +2,35 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    
+    <title>Vaultwise | Financial OS</title>
+    <meta name="description" content="Secure Financial Freedom Operating System">
+    <link rel="manifest" href="/manifest.json" />
     <link rel="icon" type="image/png" href="/logo.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vaultwise | Financial Freedom OS</title>
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Vaultwise">
+    <link rel="apple-touch-icon" href="/logo.png">
+
+    <meta name="theme-color" content="#080C0A" />
+
     <style>
-      body { background-color: #080C0A; margin: 0; }
+      /* Prevent scrolling bounce on mobile for that "App" feel */
+      html, body { 
+        background-color: #080C0A; 
+        margin: 0; 
+        overflow: hidden;
+        height: 100%;
+        width: 100%;
+        position: fixed; /* Fixes rubber-banding on iOS */
+      }
+      #root {
+        height: 100%;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+      }
     </style>
   </head>
   <body>
