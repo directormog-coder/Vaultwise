@@ -4,16 +4,24 @@ import Auth from "./components/Auth";
 import Logo from "./components/Logo";
 import { ACCENT_GREEN, BG_DARK, CARD_BG, BORDER } from "./data/constants";
 
+// Currency Formatter Utility
+const formatCurrency = (val, currency = 'ZAR') => {
+  return new Intl.NumberFormat('en-ZA', {
+    style: 'currency',
+    currency: currency,
+  }).format(val);
+};
+
 export default function App() {
   const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("dashboard");
   const [records, setRecords] = useState([]);
   const [amount, setAmount] = useState("");
   const [type, setType] = useState("expense");
+  const [selectedCurrency, setSelectedCurrency] = useState("ZAR");
 
-  // AI & Biometrics
-  const [messages, setMessages] = useState([{ role: 'assistant', content: 'Neural link active. Systems ready.' }]);
+  // AI & UI States
+  const [messages, setMessages] = useState([{ role: 'assistant', content: 'Neural link established. Your ZAR Vault is secure.' }]);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef(null);
@@ -22,7 +30,6 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session) fetchRecords();
-      setLoading(false);
     });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
@@ -39,96 +46,96 @@ export default function App() {
   const handleAddRecord = async (e) => {
     e.preventDefault();
     if (!amount) return;
-    await supabase.from('finances').insert([{ user_id: session.user.id, amount: parseFloat(amount), type }]);
-    setAmount(""); fetchRecords();
+    const { error } = await supabase.from('finances').insert([
+      { user_id: session.user.id, amount: parseFloat(amount), type, currency: selectedCurrency }
+    ]);
+    if (!error) { setAmount(""); fetchRecords(); }
   };
 
-  // --- UPGRADE: AGENTIC ADVISOR ---
   const askAdvisor = async () => {
     if (!input.trim()) return;
-    const userMsg = { role: 'user', content: input };
-    setMessages(prev => [...prev, userMsg]);
+    setMessages(prev => [...prev, { role: 'user', content: input }]);
     setInput("");
     setIsTyping(true);
 
     const total = records.reduce((acc, r) => r.type === 'income' ? acc + r.amount : acc - r.amount, 0);
-    const lastExpense = records.find(r => r.type === 'expense')?.amount || 0;
 
-    // Simulate Agentic Analysis
     setTimeout(() => {
-      let response = `Analyzing your $${total.toLocaleString()} vault... `;
-      if (total > 1000) response += "Your liquidity is high. I suggest moving 20% to a high-yield asset.";
-      else if (lastExpense > 100) response += `That last $${lastExpense} expense spiked your burn rate. Watch your velocity.`;
-      else response += "Steady growth detected. System optimized.";
-
-      setMessages(prev => [...prev, { role: 'assistant', content: response }]);
+      let advice = `Vault Status: ${formatCurrency(total, 'ZAR')}. `;
+      if (total > 5000) advice += "Your ZAR liquidity is strong. I recommend checking the current USD/ZAR pair for potential offshore diversification.";
+      else advice += "Focus on minimizing R100+ recurring expenses to boost your velocity.";
+      
+      setMessages(prev => [...prev, { role: 'assistant', content: advice }]);
       setIsTyping(false);
-    }, 1500);
+    }, 1200);
   };
 
-  // --- UPGRADE: BIOMETRIC UNLOCK ---
-  const handleBiometricAuth = async () => {
-    if (!window.PublicKeyCredential) return alert("Biometrics not supported on this device.");
-    // This triggers the native FaceID/Fingerprint prompt
-    alert("Biometric scanning initialized...");
-    // Logic: In a full prod app, we'd verify the challenge here
-  };
+  if (!session) return <Auth />;
 
   const totalBalance = records.reduce((acc, r) => r.type === 'income' ? acc + r.amount : acc - r.amount, 0);
 
   const S = {
-    container: { background: BG_DARK, minHeight: "100vh", color: "#E8F0EA", padding: "20px 20px 100px 20px", fontFamily: 'sans-serif' },
-    card: { background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 24, padding: 24, marginBottom: 20, position: 'relative', overflow: 'hidden' },
+    container: { background: BG_DARK, minHeight: "100vh", color: "#E8F0EA", padding: "20px 20px 120px 20px", fontFamily: 'sans-serif' },
+    card: { background: CARD_BG, border: `1px solid ${BORDER}`, borderRadius: 24, padding: 24, marginBottom: 20 },
     label: { color: "#3D6B4A", fontSize: 10, letterSpacing: 2, marginBottom: 8, textTransform: "uppercase" },
     input: { background: '#000', border: `1px solid ${BORDER}`, padding: 14, borderRadius: 12, color: ACCENT_GREEN, width: '100%', marginBottom: 10, outline: 'none' },
-    nav: { position: 'fixed', bottom: 20, left: 20, right: 20, display: 'flex', gap: 10, background: '#0A120C', padding: 8, borderRadius: 50, border: `1px solid ${BORDER}` },
+    nav: { position: 'fixed', bottom: 20, left: 20, right: 20, display: 'flex', gap: 10, background: '#0A120C', padding: 8, borderRadius: 50, border: `1px solid ${BORDER}`, zIndex: 100 },
     navBtn: (active) => ({ flex: 1, padding: '14px 0', borderRadius: 40, border: 'none', background: active ? ACCENT_GREEN : 'transparent', color: active ? '#000' : '#3D6B4A', fontWeight: 'bold' }),
-    // Sparkline Graph CSS
-    chartBar: (height) => ({ width: 8, background: ACCENT_GREEN, borderRadius: 4, height: height, opacity: 0.6 })
+    currencyPill: (active) => ({ padding: '6px 12px', borderRadius: 20, fontSize: 10, background: active ? ACCENT_GREEN : '#000', color: active ? '#000' : ACCENT_GREEN, border: `1px solid ${BORDER}`, marginRight: 5 })
   };
-
-  if (loading) return <div style={{ background: BG_DARK, height: '100vh' }} />;
-  if (!session) return <Auth onBiometric={handleBiometricAuth} />;
 
   return (
     <div style={S.container}>
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <Logo size={28} />
-        <button onClick={handleBiometricAuth} style={{ background: '#0A120C', border: `1px solid ${BORDER}`, borderRadius: 12, padding: '6px 10px', color: ACCENT_GREEN, fontSize: 10 }}>SECURE SCAN</button>
+        <div style={{ display: 'flex', gap: 5 }}>
+          {['ZAR', 'USD', 'EUR', 'BTC'].map(c => (
+            <button key={c} onClick={() => setSelectedCurrency(c)} style={S.currencyPill(selectedCurrency === c)}>{c}</button>
+          ))}
+        </div>
       </header>
 
       {tab === "dashboard" && (
         <div className="fade">
           <div style={S.card}>
-            <p style={S.label}>Growth Velocity</p>
-            <div style={{ display: 'flex', alignItems: 'flex-end', gap: 4, height: 40, marginBottom: 15 }}>
-              {[20, 35, 25, 45, 60, 55, 80].map((h, i) => <div key={i} style={S.chartBar(h)} />)}
-            </div>
-            <p style={S.label}>Net Liquidity</p>
-            <h2 style={{ fontSize: 44, color: ACCENT_GREEN, margin: 0 }}>${totalBalance.toLocaleString()}</h2>
+            <p style={S.label}>Net Position (ZAR)</p>
+            <h2 style={{ fontSize: 40, color: ACCENT_GREEN, margin: 0 }}>{formatCurrency(totalBalance, 'ZAR')}</h2>
           </div>
 
           <form onSubmit={handleAddRecord} style={S.card}>
-            <p style={S.label}>Manual Ingress</p>
+            <p style={S.label}>Add {selectedCurrency} Entry</p>
             <input style={S.input} type="number" placeholder="0.00" value={amount} onChange={(e) => setAmount(e.target.value)} />
             <div style={{ display: 'flex', gap: 10, marginBottom: 15 }}>
-              <button type="button" onClick={() => setType('income')} style={S.navBtn(type === 'income')}>INCOME</button>
-              <button type="button" onClick={() => setType('expense')} style={S.navBtn(type === 'expense')}>EXPENSE</button>
+              <button type="button" onClick={() => setType('income')} style={S.navBtn(type === 'income')}>CREDIT</button>
+              <button type="button" onClick={() => setType('expense')} style={S.navBtn(type === 'expense')}>DEBIT</button>
             </div>
-            <button type="submit" style={{ ...S.navBtn(true), width: '100%' }}>CONFIRM ENTRY</button>
+            <button type="submit" style={{ ...S.navBtn(true), width: '100%' }}>SECURE TRANSACTION</button>
           </form>
+
+          <p style={S.label}>Neural Activity History</p>
+          {records.slice(0, 5).map(r => (
+            <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 0', borderBottom: `1px solid ${BORDER}` }}>
+              <div>
+                <div style={{ fontSize: 14 }}>{r.type.toUpperCase()}</div>
+                <div style={{ fontSize: 10, color: '#3D6B4A' }}>{new Date(r.created_at).toLocaleDateString()}</div>
+              </div>
+              <span style={{ color: r.type === 'income' ? ACCENT_GREEN : '#ff4444', fontWeight: 'bold' }}>
+                {r.type === 'income' ? '+' : '-'}{formatCurrency(r.amount, r.currency)}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
       {tab === "advisor" && (
         <div className="fade" style={{ display: 'flex', flexDirection: 'column', height: '75vh' }}>
-          <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+          <div ref={scrollRef} style={{ flex: 1, overflowY: 'auto', paddingBottom: 20 }}>
             {messages.map((m, i) => (
-              <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', background: m.role === 'user' ? ACCENT_GREEN : '#0A120C', color: m.role === 'user' ? '#000' : '#E8F0EA', padding: '12px 16px', borderRadius: 16, marginBottom: 12, fontSize: 14 }}>{m.content}</div>
+              <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', background: m.role === 'user' ? ACCENT_GREEN : '#0A120C', color: m.role === 'user' ? '#000' : '#E8F0EA', padding: '12px 16px', borderRadius: 16, marginBottom: 12, fontSize: 14, maxWidth: '85%', marginLeft: m.role === 'user' ? 'auto' : 0 }}>{m.content}</div>
             ))}
           </div>
           <div style={{ display: 'flex', gap: 10 }}>
-            <input style={{ ...S.input, marginBottom: 0 }} placeholder="Query OS..." value={input} onChange={(e) => setInput(e.target.value)} />
+            <input style={{ ...S.input, marginBottom: 0 }} placeholder="Query Advisor..." value={input} onChange={(e) => setInput(e.target.value)} />
             <button onClick={askAdvisor} style={{ ...S.navBtn(true), flex: '0 0 50px' }}>&rarr;</button>
           </div>
         </div>
